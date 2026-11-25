@@ -39,6 +39,11 @@ class OrderTest extends TestCase
         $response->assertSessionHasNoErrors()
             ->assertRedirect(route('orders.show', $order));
 
+        $this->actingAs($buyer)
+            ->get(route('orders.show', $order))
+            ->assertOk()
+            ->assertSee("Order #{$order->id}");
+
         $this->assertSame(OrderStatus::Requested, $order->status);
         $this->assertSame(2000, $order->unit_price);
         $this->assertSame($listing->farmer_id, $order->farmer_id);

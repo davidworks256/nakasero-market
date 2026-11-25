@@ -1,5 +1,7 @@
 <x-layouts.dashboard :title="'Order #'.$order->id">
-    @php($isBuyer = auth()->id() === $order->buyer_id)
+    @php
+        $isBuyer = auth()->id() === $order->buyer_id;
+    @endphp
 
     <a href="{{ route('orders.index') }}" class="text-sm text-gray-600 hover:text-black">← {{ $isBuyer ? 'My orders' : 'Sales' }}</a>
 
