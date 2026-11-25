@@ -4,7 +4,6 @@ namespace App\Notifications;
 
 use App\Models\Order;
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -22,7 +21,7 @@ class OrderStatusChanged extends Notification
         return ['mail', 'database'];
     }
 
-    public function toMail(object $notifiable): Mailable
+    public function toMail(object $notifiable): MailMessage
     {
         $title = match ($this->event) {
             'requested' => 'New order request from '.$this->order->buyer?->name,

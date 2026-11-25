@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Models\Listing;
 use App\Models\Order;
 use App\Models\User;
+use App\Notifications\OrderStatusChanged;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -32,12 +33,19 @@ class OrderTest extends TestCase
         $listing = $this->listing();
         $buyer = User::factory()->buyer()->create();
 
-        $this->requestOrder($buyer, $listing)->assertSessionHasNoErrors();
+        $response = $this->requestOrder($buyer, $listing);
 
         $order = Order::firstOrFail();
+        $response->assertSessionHasNoErrors()
+            ->assertRedirect(route('orders.show', $order));
+
         $this->assertSame(OrderStatus::Requested, $order->status);
         $this->assertSame(2000, $order->unit_price);
         $this->assertSame($listing->farmer_id, $order->farmer_id);
+        $this->assertDatabaseHas('notifications', [
+            'notifiable_id' => $listing->farmer_id,
+            'type' => OrderStatusChanged::class,
+        ]);
     }
 
     public function test_over_quantity_requests_fail_validation(): void
@@ -53,10 +61,12 @@ class OrderTest extends TestCase
     {
         $listing = $this->listing(30);
         $buyer = User::factory()->buyer()->create();
-        $this->requestOrder($buyer, $listing, 10);
+        $this->requestOrder($buyer, $listing, 10)->assertRedirect();
 
         $order = Order::firstOrFail();
-        $this->actingAs($listing->farmer)->post(route('orders.update', [$order, 'accept']));
+        $this->actingAs($listing->farmer)
+            ->post(route('orders.update', [$order, 'accept']))
+            ->assertRedirect();
 
         $this->assertSame(OrderStatus::Accepted, $order->fresh()->status);
         $this->assertSame(20, $listing->fresh()->quantity_available);
@@ -66,9 +76,11 @@ class OrderTest extends TestCase
     {
         $listing = $this->listing(10);
         $buyer = User::factory()->buyer()->create();
-        $this->requestOrder($buyer, $listing, 10);
+        $this->requestOrder($buyer, $listing, 10)->assertRedirect();
 
-        $this->actingAs($listing->farmer)->post(route('orders.update', [Order::firstOrFail(), 'accept']));
+        $this->actingAs($listing->farmer)
+            ->post(route('orders.update', [Order::firstOrFail(), 'accept']))
+            ->assertRedirect();
 
         $this->assertSame(Listing::STATUS_SOLD_OUT, $listing->fresh()->status);
     }

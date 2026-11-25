@@ -29,7 +29,7 @@ Route::get('/dashboard', function () {
 Route::middleware(['auth', 'role:farmer'])->prefix('farmer')->name('farmer.')->group(function () {
     Route::get('/dashboard', fn () => view('farmer.dashboard'))->name('dashboard');
     Route::patch('listings/{listing}/stock', [FarmerListingController::class, 'updateStock'])->name('listings.stock');
-    Route::resource('listings', FarmerListingController::class);
+    Route::resource('listings', FarmerListingController::class)->except(['show']);
 });
 
 Route::middleware(['auth', 'role:buyer'])->prefix('buyer')->name('buyer.')->group(function () {
@@ -90,26 +90,23 @@ Route::get('/health', function () {
             $tableCount = count(DB::select('SHOW TABLES'));
         }
     } catch (Throwable $e) {
-        $dbError = $e->getMessage();
+        $dbError = config('app.debug') ? $e->getMessage() : 'Database connection error';
     }
 
     return response()->json([
         'status' => $dbOk ? 'healthy' : 'degraded',
-        'php' => PHP_VERSION,
-        'app_env' => config('app.env'),
-        'app_debug' => config('app.debug'),
-        'app_key_set' => ! empty(config('app.key')),
-        'db_connection' => config('database.default'),
         'db_connected' => $dbOk,
         'db_error' => $dbError,
         'table_count' => $tableCount,
     ]);
 });
 
-Route::get('/deploy/init', function (Request $request) {
-    $expectedKey = config('app.key');
-    if (! empty($expectedKey) && $request->query('key') !== $expectedKey && ! $request->query('force')) {
-        abort(403, 'Unauthorized setup access key. Provide ?key={APP_KEY} or ?force=1');
+Route::post('/deploy/init', function (Request $request) {
+    $expectedKey = (string) config('app.key');
+    $providedKey = (string) $request->header('X-Deploy-Key', '');
+
+    if ($expectedKey === '' || ! hash_equals($expectedKey, $providedKey)) {
+        abort(403, 'Unauthorized setup access key.');
     }
 
     try {
@@ -128,25 +125,28 @@ Route::get('/deploy/init', function (Request $request) {
     } catch (Throwable $e) {
         return response()->json([
             'status' => 'error',
-            'message' => $e->getMessage(),
+            'message' => config('app.debug') ? $e->getMessage() : 'Initialization failed',
         ], 500);
     }
 });
 
 Route::get('/storage/{path}', function (string $path) {
-    $file = storage_path('app/public/'.$path);
-    if (file_exists($file)) {
+    abort_if(str_contains($path, '..'), 404);
+
+    $publicRoot = realpath(storage_path('app/public'));
+    $file = realpath(storage_path('app/public/'.$path));
+    if ($publicRoot && $file && str_starts_with($file, $publicRoot) && is_file($file)) {
         return response()->file($file);
     }
 
     $basename = basename($path);
     $pub = public_path('images/produce/'.$basename);
-    if (file_exists($pub)) {
+    if (is_file($pub)) {
         return response()->file($pub);
     }
 
     $demo = resource_path('demo-images/produce/'.$basename);
-    if (file_exists($demo)) {
+    if (is_file($demo)) {
         return response()->file($demo);
     }
 

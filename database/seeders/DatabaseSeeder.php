@@ -13,12 +13,15 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $adminPassword = (string) env('ADMIN_PASSWORD', 'Nakasero@Admin2026!');
+        $demoPassword = (string) env('DEMO_USER_PASSWORD', 'Nakasero@Demo2026!');
+
         User::updateOrCreate(
             ['email' => 'admin@nakasero.test'],
             [
                 'name' => 'Market Admin',
                 'phone' => '0700000001',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($adminPassword),
                 'role' => 'admin',
                 'status' => 'active',
                 'email_verified_at' => now(),
@@ -43,7 +46,7 @@ class DatabaseSeeder extends Seeder
                 'name' => 'DEMO Farmer (Sarah)',
                 'email' => 'demo-farmer@nakasero.test',
                 'phone' => '0700000002',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($demoPassword),
                 'role' => 'farmer',
                 'email_verified_at' => now(),
                 'consent_at' => now(),
@@ -58,7 +61,7 @@ class DatabaseSeeder extends Seeder
                 'name' => 'DEMO Farmer (pending verification)',
                 'email' => 'demo-farmer2@nakasero.test',
                 'phone' => '0700000003',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($demoPassword),
                 'role' => 'farmer',
                 'email_verified_at' => now(),
                 'consent_at' => now(),
@@ -123,7 +126,7 @@ class DatabaseSeeder extends Seeder
                 'name' => 'DEMO Buyer (James)',
                 'email' => 'demo-buyer@nakasero.test',
                 'phone' => '0700000004',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($demoPassword),
                 'role' => 'buyer',
                 'email_verified_at' => now(),
                 'consent_at' => now(),

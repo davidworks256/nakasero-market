@@ -36,7 +36,7 @@ class AppServiceProvider extends ServiceProvider
         }
 
         try {
-            if (! Schema::hasTable('users')) {
+            if (! $this->app->runningUnitTests() && ! Schema::hasTable('users')) {
                 Artisan::call('migrate', ['--force' => true]);
                 Artisan::call('db:seed', ['--force' => true]);
             }
